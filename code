@@ -1,0 +1,48 @@
+import os
+import requests
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+
+# Получаем токен доступа к Telegram боту из переменных среды Heroku
+TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
+
+# URL эндпоинта API ChatGPT
+CHATGPT_API_URL = 'https://api.chatgpt.com/v1/chat/'
+
+# Функция для отправки запроса к API ChatGPT
+def send_message_to_chatgpt(message):
+    headers = {'Authorization': 'Bearer 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'}
+    data = {'message': message}
+    response = requests.post(CHATGPT_API_URL, headers=headers, json=data)
+    return response.json()['message']
+
+# Обработчик команды /start
+def start(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text('Привет! Я бот, который использует ChatGPT. Поговорите со мной!')
+
+# Обработчик текстовых сообщений
+def message(update: Update, context: CallbackContext) -> None:
+    user_message = update.message.text
+    bot_reply = send_message_to_chatgpt(user_message)
+    update.message.reply_text(bot_reply)
+
+# Основная функция для работы бота
+def main():
+    # Создаем экземпляр класса Updater и передаем в него токен Telegram бота
+    updater = Updater(TELEGRAM_TOKEN)
+    dispatcher = updater.dispatcher
+
+    # Добавляем обработчик команды /start
+    dispatcher.add_handler(CommandHandler("start", start))
+
+    # Добавляем обработчик текстовых сообщений
+    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, message))
+
+    # Запускаем бота
+    updater.start_polling()
+
+    # Бот работает до получения сигнала выключения
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
